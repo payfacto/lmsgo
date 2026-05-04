@@ -1,0 +1,147 @@
+name: Build
+
+# Triggered by the Bitbucket -> GitHub mirror (bitbucket-pipelines.yml).
+#
+# - Push to main:   builds all platforms, uploads artifacts (14-day retention).
+# - Push of v* tag: builds all platforms AND publishes a GitHub Release.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: write   # required for gh release create/upload
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux/amd64
+            binary: lmsgo
+            archive: lmsgo-linux-amd64.tar.gz
+          - os: windows-latest
+            platform: windows/amd64
+            binary: lmsgo.exe
+            archive: lmsgo-windows-amd64.zip
+          - os: macos-latest
+            platform: darwin/arm64
+            binary: lmsgo
+            archive: lmsgo-darwin-arm64.zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so git describe --tags works
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: echo "version=$(git describe --tags --always --dirty)" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        shell: bash
+        run: |
+          go build \
+            -ldflags "-X 'github.com/payfacto/lmsgo/internal/version.Version=${{ steps.version.outputs.version }}'" \
+            -o build/bin/${{ matrix.binary }} \
+            ./...
+
+      - name: Package (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: tar -czvf ${{ matrix.archive }} -C build/bin lmsgo
+
+      - name: Package (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: Compress-Archive -Path build/bin/lmsgo.exe -DestinationPath ${{ matrix.archive }}
+
+      - name: Package (macOS)
+        if: matrix.os == 'macos-latest'
+        run: cd build/bin && zip -r ../../${{ matrix.archive }} lmsgo
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}
+          retention-days: 14
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+                 --title "$GITHUB_REF_NAME" --generate-notes \
+            || true
+          gh release upload "$GITHUB_REF_NAME" "${{ matrix.archive }}" \
+            --repo "$GITHUB_REPOSITORY" --clobber
+
+  brew-tap:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute bare version (strip leading v)
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Download macOS arm64 archive
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$GITHUB_REF_NAME" \
+            --pattern "lmsgo-darwin-arm64.zip" \
+            --repo "$GITHUB_REPOSITORY"
+
+      - name: Compute SHA256
+        id: sha
+        run: echo "arm64=$(sha256sum lmsgo-darwin-arm64.zip | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: payfacto/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          SHA256: ${{ steps.sha.outputs.arm64 }}
+        run: |
+          cat > homebrew-tap/Formula/lmsgo.rb << EOF
+          class Lmsgo < Formula
+            desc "Delegate bulk I/O from Claude Code to a local LM Studio model"
+            homepage "https://github.com/payfacto/lmsgo"
+            version "${VERSION}"
+            sha256 "${SHA256}"
+
+            url "https://github.com/payfacto/lmsgo/releases/download/v#{version}/lmsgo-darwin-arm64.zip"
+
+            def install
+              bin.install "lmsgo"
+            end
+          end
+          EOF
+
+      - name: Commit and push
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/lmsgo.rb
+          git diff --cached --quiet || git commit -m "chore: bump lmsgo to ${{ steps.ver.outputs.version }}"
+          git push

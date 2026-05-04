@@ -1,0 +1,22 @@
+image: alpine/git:latest
+
+clone:
+  depth: full   # required for git describe --tags to work in GitHub Actions
+
+definitions:
+  steps:
+    - step: &mirror-to-github
+        name: Mirror to GitHub
+        script:
+          - git fetch origin
+          - git remote add github git@github.com:payfacto/lmsgo.git
+          - git push github refs/remotes/origin/main:refs/heads/main --force
+          - git push github --tags --force
+
+pipelines:
+  branches:
+    main:
+      - step: *mirror-to-github
+  tags:
+    'v*':
+      - step: *mirror-to-github
