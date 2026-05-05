@@ -54,7 +54,7 @@ jobs:
           go build \
             -ldflags "-X 'github.com/payfacto/lmsgo/internal/version.Version=${{ steps.version.outputs.version }}'" \
             -o build/bin/${{ matrix.binary }} \
-            ./...
+            .
 
       - name: Package (Linux)
         if: matrix.os == 'ubuntu-latest'
