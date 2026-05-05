@@ -10,7 +10,7 @@ Single Go binary — no Python, no venv, no dependencies.
 **Core principle: Claude = thinking. LM Studio = I/O.**
 
 > [!NOTE]
-> Inspired by [I Was Burning Through Claude Code's Weekly Limit in 3 Days — Here's How I Fixed It](https://medium.com/@kunalbhardwaj598/i-was-burning-through-claude-codes-weekly-limit-in-3-days-here-s-how-i-fixed-it-0344c555abda)
+> Inspired by the Medium article [I Was Burning Through Claude Code's Weekly Limit in 3 Days — Here's How I Fixed It](https://medium.com/@kunalbhardwaj598/i-was-burning-through-claude-codes-weekly-limit-in-3-days-here-s-how-i-fixed-it-0344c555abda)
 
 ## Commands
 
@@ -19,6 +19,7 @@ lmsgo ask     --question "..." <file|dir> [...]   # bulk file reading
 lmsgo write   --spec "..." --target <out> [ctx]   # boilerplate generation
 lmsgo extract [-o output] <session.jsonl>          # strip Claude Code session to text
 lmsgo setup   [--model NAME] [--dry-run]           # first-run configuration
+lmsgo version                                      # print version and exit
 ```
 
 ## Setup
