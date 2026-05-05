@@ -56,6 +56,40 @@ git push origin v1.2.3  # push tag to Bitbucket; pipeline mirrors it to GitHub
 - Never reuse a tag — delete and re-push only if the release hasn't been published yet.
 - GitHub Actions triggers on `v*` — any tag starting with `v` fires a release build.
 
+### Exposing version to users
+
+#### CLI (manual switch)
+
+```go
+// main.go
+import "github.com/<org>/<project>/internal/version"
+
+switch os.Args[1] {
+case "version", "--version", "-v":
+    fmt.Println("<project> " + version.Version)
+}
+```
+
+#### CLI (cobra)
+
+```go
+// cmd/root.go
+var Version = "dev"   // injected via -ldflags
+
+var rootCmd = &cobra.Command{
+    Version: Version,   // cobra wires --version automatically
+}
+```
+
+**Build command** — always use `.` not `./...` when passing `-o <file>`:
+
+```bash
+go build -ldflags "-X '<module>/internal/version.Version=${VERSION}'" -o build/bin/<PROJECT> .
+```
+
+> `./...` matches all packages; `-o <file>` with multiple packages fails.
+> Use `.` to build only the `main` package at the repo root.
+
 ---
 
 ## 2. Bitbucket → GitHub Mirror Pipeline
