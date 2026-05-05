@@ -1,5 +1,9 @@
 # lmsgo
 
+<p align="center">
+  <img src="assets/banner.png" alt="lmsgo — Delegate bulk I/O from Claude to a local model" width="680">
+</p>
+
 Delegate bulk I/O from Claude Code to a local [LM Studio](https://lmstudio.ai) model.
 Single Go binary — no Python, no venv, no dependencies.
 
@@ -11,6 +15,7 @@ Single Go binary — no Python, no venv, no dependencies.
 lmsgo ask     --question "..." <file|dir> [...]   # bulk file reading
 lmsgo write   --spec "..." --target <out> [ctx]   # boilerplate generation
 lmsgo extract [-o output] <session.jsonl>          # strip Claude Code session to text
+lmsgo setup   [--model NAME] [--dry-run]           # first-run configuration
 ```
 
 ## Setup
@@ -49,42 +54,44 @@ Settings (`Ctrl+,`) → enable **"Run the LLM server on login"**.
 
 Docs: [lmstudio.ai/docs/developer/core/headless](https://lmstudio.ai/docs/developer/core/headless#auto-server-start)
 
-### 4. Verify the server
+### 4. Install lmsgo
+
+#### Option A — Homebrew (macOS)
 
 ```bash
-curl http://localhost:1234/v1/models
+brew tap payfacto/tap
+brew install payfacto/tap/lmsgo
 ```
 
-Note the `id` of your model — you need it for `LMS_MODEL`.
+#### Option B — Download a release binary
 
-### 5. Install lmsgo
+Download the archive for your platform from the [GitHub releases page](https://github.com/payfacto/lmsgo/releases), extract, and place the binary on your `PATH`.
+
+#### Option C — Build from source
 
 ```bash
-# Build from source
-cd C:/claudecode/scripts/lmsgo
-go build -o lmsgo.exe .
-cp lmsgo.exe ~/bin/
+go build -o lmsgo .
+cp lmsgo ~/bin/
 ```
 
-### 6. Configure environment
-
-Add to `~/.bashrc`:
+### 5. Run setup
 
 ```bash
-export LMS_MODEL=gemma-4-e2b-it   # model id from step 4
-# LMS_BASE_URL defaults to http://localhost:1234/v1
-# LMS_API_KEY  defaults to lm-studio (LM Studio ignores it)
+lmsgo setup
 ```
 
-### 7. Smoke test
+This detects your running LM Studio instance, lets you choose a model, writes the environment variables to a sourceable file, and appends the Claude Code routing snippet to `~/.claude/CLAUDE.md` — all in one step.
+
+```bash
+lmsgo setup --dry-run   # preview without writing anything
+lmsgo setup --model gemma-4-e2b-it   # skip the interactive model prompt
+```
+
+### 6. Smoke test
 
 ```bash
 lmsgo ask --question "What files are in this project?" README.md
 ```
-
-### 8. Wire up Claude Code
-
-Paste `CLAUDE_MD_SNIPPET.md` into `~/.claude/CLAUDE.md`. Claude will then self-route to `lmsgo` automatically.
 
 ## Usage
 
@@ -118,11 +125,13 @@ lmsgo ask --question "What doc updates are needed? Give exact edits." \
 
 ```
 lmsgo/
-├── main.go       # subcommand routing and usage
-├── client.go     # LM Studio HTTP client (stdlib only)
-├── ask.go        # ask subcommand
-├── write.go      # write subcommand
-├── extract.go    # extract subcommand
+├── main.go                      # subcommand routing and usage
+├── client.go                    # LM Studio HTTP client (complete + listModels)
+├── ask.go                       # ask subcommand
+├── write.go                     # write subcommand
+├── extract.go                   # extract subcommand
+├── setup.go                     # setup subcommand (embeds CLAUDE_MD_SNIPPET.md)
+├── internal/version/version.go  # version injected via -ldflags
 ├── go.mod
 └── CLAUDE_MD_SNIPPET.md
 ```

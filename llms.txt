@@ -1,0 +1,102 @@
+# lmsgo — LM Studio CLI for Claude Code
+
+Delegates bulk file I/O from Claude Code to a local LM Studio model.
+Single Go binary, no dependencies.
+
+**Rule: Claude = thinking. LM Studio = I/O.**
+
+## When to use
+
+| Use lmsgo | Do NOT use lmsgo |
+|-----------|-----------------|
+| 3+ files to read | Tasks < 2000 tokens |
+| Any single file > 400 lines | Debugging |
+| Doc updates after a session | Architecture decisions |
+| Generating boilerplate / test files | Security-sensitive code |
+| Config scaffolding | Anything needing exact line numbers |
+
+## Commands
+
+### ask — answer a question across files
+
+```
+lmsgo ask --question "..." <file|dir> [<file|dir>...]
+          [--glob PATTERN]       # filter files when a directory is given
+          [--max-tokens N]       # default: 8192
+```
+
+Examples:
+
+```bash
+lmsgo ask --question "Where are JWT tokens validated?" src/auth/
+lmsgo ask --question "What env vars does this app require?" main.go config.go
+lmsgo ask --glob "*.java" --question "Where is the DB pool configured?" src/
+```
+
+### write — generate a file from a spec
+
+```
+lmsgo write --spec "..." --target <output-path> [context-file...]
+            [--max-tokens N]     # default: 16384
+            [--dry-run]          # print output instead of writing
+```
+
+Examples:
+
+```bash
+lmsgo write --spec "Go table-driven tests for UserService" \
+            --target internal/user/service_test.go \
+            internal/user/service.go
+
+lmsgo write --spec "Dockerfile for a Go app" --target Dockerfile --dry-run
+```
+
+### extract — strip a Claude Code session to readable text
+
+```
+lmsgo extract <session.jsonl> [-o output-file] [--last N]
+```
+
+Examples:
+
+```bash
+lmsgo extract ~/.claude/projects/my-project/session.jsonl -o /tmp/chat.txt
+lmsgo extract ~/.claude/projects/my-project/session.jsonl --last 20
+```
+
+Typical follow-up:
+
+```bash
+lmsgo ask --question "What doc updates are needed? Give exact edits." \
+          /tmp/chat.txt docs/architecture.md
+```
+
+### setup — first-run configuration
+
+```
+lmsgo setup [--model NAME] [--dry-run]
+```
+
+Detects LM Studio models, writes env vars to a sourceable file, and appends
+the Claude Code routing snippet to ~/.claude/CLAUDE.md.
+
+### version
+
+```
+lmsgo version
+```
+
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| LMS_BASE_URL | http://localhost:1234/v1 | LM Studio API base URL |
+| LMS_MODEL | local-model | Model ID from /v1/models |
+| LMS_API_KEY | lm-studio | Ignored by LM Studio |
+
+Set via `lmsgo setup` or manually in your shell profile.
+
+## Prerequisites
+
+LM Studio must be running: `lms daemon up`
+Verify: `curl http://localhost:1234/v1/models`

@@ -24,10 +24,11 @@ cp lmsgo.exe ~/bin/
 Single `main` package with one file per subcommand:
 
 - [main.go](main.go) — subcommand dispatch (`os.Args[1]` switch); imports `internal/version`
-- [client.go](client.go) — `complete()` function: the only path to the LM Studio API (`POST /v1/chat/completions`). Reads `LMS_BASE_URL`, `LMS_MODEL`, `LMS_API_KEY` env vars.
+- [client.go](client.go) — `complete()` and `listModels()`: all LM Studio HTTP calls (`POST /v1/chat/completions`, `GET /v1/models`). Reads `LMS_BASE_URL`, `LMS_MODEL`, `LMS_API_KEY` env vars.
 - [ask.go](ask.go) — `runAsk`: walks files/dirs into an XML corpus, sends a three-message conversation (system + corpus + question)
 - [write.go](write.go) — `runWrite`: builds a generation prompt from `--spec` and context files, writes result directly to `--target`
 - [extract.go](extract.go) — `runExtract`: parses Claude Code JSONL session files (two different record shapes) into readable `[ROLE]\ntext` exchanges
+- [setup.go](setup.go) — `runSetup`: detects LM Studio models, writes env file (`~/.config/lmsgo/env` or `%APPDATA%\lmsgo\env.ps1`), patches `~/.claude/CLAUDE.md` with the embedded snippet (sentinel-guarded for idempotency). Uses `//go:embed CLAUDE_MD_SNIPPET.md`.
 - [internal/version/version.go](internal/version/version.go) — `Version` var, defaulting to `"dev"`, injected at build time via `-ldflags`
 
 ## Adding a Subcommand
@@ -55,6 +56,8 @@ curl http://localhost:1234/v1/models
 ## Versioning and Releases
 
 **Source of truth is Bitbucket. GitHub is CI/release only. Never push directly to the GitHub mirror.**
+
+@.context/GO-RELEASE-PATTERNS.md
 
 ### Release flow
 

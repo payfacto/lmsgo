@@ -37,6 +37,52 @@ type completionResponse struct {
 	} `json:"error,omitempty"`
 }
 
+type modelsResponse struct {
+	Data []struct {
+		ID string `json:"id"`
+	} `json:"data"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
+}
+
+func listModels() ([]string, error) {
+	baseURL := envOr("LMS_BASE_URL", defaultBaseURL)
+	apiKey := envOr("LMS_API_KEY", defaultAPIKey)
+
+	req, err := http.NewRequest(http.MethodGet, baseURL+"/models", nil)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GET /models: %w", err)
+	}
+	defer resp.Body.Close()
+
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
+	var mr modelsResponse
+	if err := json.Unmarshal(raw, &mr); err != nil {
+		return nil, fmt.Errorf("parse response: %w", err)
+	}
+	if mr.Error != nil {
+		return nil, fmt.Errorf("API error: %s", mr.Error.Message)
+	}
+
+	ids := make([]string, len(mr.Data))
+	for i, m := range mr.Data {
+		ids[i] = m.ID
+	}
+	return ids, nil
+}
+
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v

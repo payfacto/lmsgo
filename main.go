@@ -13,12 +13,14 @@ Usage:
   lmsgo ask    --question "..." <file|dir> [<file|dir>...]
   lmsgo write  --spec "..." --target <output> [context-file...]
   lmsgo extract [-o output] <session.jsonl>
+  lmsgo setup  [--model NAME] [--dry-run]
   lmsgo version
 
 Subcommands:
   ask       Read files and answer a question using the local model
   write     Generate a boilerplate file from a spec
   extract   Strip a Claude Code JSONL session to readable text
+  setup     Detect models, write env file, patch ~/.claude/CLAUDE.md
   version   Print the version and exit
 
 Environment:
@@ -42,6 +44,8 @@ func main() {
 		runWrite(os.Args[2:])
 	case "extract":
 		runExtract(os.Args[2:])
+	case "setup":
+		runSetup(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Println("lmsgo " + version.Version)
 	case "-h", "--help", "help":
