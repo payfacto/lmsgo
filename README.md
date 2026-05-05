@@ -9,6 +9,9 @@ Single Go binary — no Python, no venv, no dependencies.
 
 **Core principle: Claude = thinking. LM Studio = I/O.**
 
+> [!NOTE]
+> Inspired by [I Was Burning Through Claude Code's Weekly Limit in 3 Days — Here's How I Fixed It](https://medium.com/@kunalbhardwaj598/i-was-burning-through-claude-codes-weekly-limit-in-3-days-here-s-how-i-fixed-it-0344c555abda)
+
 ## Commands
 
 ```
