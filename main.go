@@ -12,7 +12,7 @@ const usage = `lmsgo — delegate bulk I/O from Claude Code to a local LM Studio
 Usage:
   lmsgo ask    --question "..." <file|dir> [<file|dir>...]
   lmsgo write  --spec "..." --target <output> [context-file...]
-  lmsgo extract [-o output] <session.jsonl>
+  lmsgo extract [-o output] [--last N] <session.jsonl>
   lmsgo setup  [--model NAME] [--dry-run]
   lmsgo version
 

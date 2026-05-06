@@ -54,14 +54,16 @@ lmsgo write --spec "Dockerfile for a Go app" --target Dockerfile --dry-run
 ### extract — strip a Claude Code session to readable text
 
 ```
-lmsgo extract <session.jsonl> [-o output-file] [--last N]
+lmsgo extract [-o output-file] [--last N] <session.jsonl>
 ```
+
+Flags must come **before** the positional `<session.jsonl>` — Go's `flag` package stops parsing at the first non-flag argument.
 
 Examples:
 
 ```bash
-lmsgo extract ~/.claude/projects/my-project/session.jsonl -o /tmp/chat.txt
-lmsgo extract ~/.claude/projects/my-project/session.jsonl --last 20
+lmsgo extract -o /tmp/chat.txt ~/.claude/projects/my-project/session.jsonl
+lmsgo extract --last 20 ~/.claude/projects/my-project/session.jsonl
 ```
 
 Typical follow-up:

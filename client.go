@@ -32,18 +32,37 @@ type completionResponse struct {
 	Choices []struct {
 		Message message `json:"message"`
 	} `json:"choices"`
-	Error *struct {
+	// Error accepts both shapes LM Studio returns:
+	//   {"error":{"message":"..."}}        - OpenAI-compatible
+	//   {"error":"Context length exceeded"} - LM Studio's terse form on overflow
+	Error json.RawMessage `json:"error,omitempty"`
+}
+
+// errorMessage extracts a human-readable error string from either shape.
+// Falls back to the raw JSON when neither shape yields a usable message —
+// surfacing unknown-but-non-empty error payloads beats hiding them as "".
+func errorMessage(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil {
+		return s
+	}
+	var obj struct {
 		Message string `json:"message"`
-	} `json:"error,omitempty"`
+	}
+	if err := json.Unmarshal(raw, &obj); err == nil && obj.Message != "" {
+		return obj.Message
+	}
+	return string(raw)
 }
 
 type modelsResponse struct {
 	Data []struct {
 		ID string `json:"id"`
 	} `json:"data"`
-	Error *struct {
-		Message string `json:"message"`
-	} `json:"error,omitempty"`
+	Error json.RawMessage `json:"error,omitempty"`
 }
 
 func listModels() ([]string, error) {
@@ -72,8 +91,8 @@ func listModels() ([]string, error) {
 	if err := json.Unmarshal(raw, &mr); err != nil {
 		return nil, fmt.Errorf("parse response: %w", err)
 	}
-	if mr.Error != nil {
-		return nil, fmt.Errorf("API error: %s", mr.Error.Message)
+	if msg := errorMessage(mr.Error); msg != "" {
+		return nil, fmt.Errorf("API error: %s", msg)
 	}
 
 	ids := make([]string, len(mr.Data))
@@ -128,8 +147,8 @@ func complete(msgs []message, maxTokens int, temperature float64) (string, error
 	if err := json.Unmarshal(raw, &cr); err != nil {
 		return "", fmt.Errorf("parse response: %w\nbody: %s", err, raw)
 	}
-	if cr.Error != nil {
-		return "", fmt.Errorf("API error: %s", cr.Error.Message)
+	if msg := errorMessage(cr.Error); msg != "" {
+		return "", fmt.Errorf("API error: %s", msg)
 	}
 	if len(cr.Choices) == 0 {
 		return "", fmt.Errorf("empty response from model")
