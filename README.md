@@ -32,18 +32,24 @@ Download and install [LM Studio](https://lmstudio.ai).
 
 ### 2. Download a model
 
-Open LM Studio → **Discover** tab → search `gemma-4-e2b-it` → download from Hugging Face.
+Open LM Studio → **Discover** tab → search for a model → download from Hugging Face.
 This must be done through LM Studio — do not download weights manually.
 
-> Any instruction-tuned model works. `gemma-4-e2b-it` is a fast, lightweight default.
-> Larger models (e.g. `qwen2.5-coder-7b-instruct`) produce better output at the cost of more RAM.
+Tested models:
 
-### 3. Tune LM Studio for lmsgo (Gemma 4 E2B)
+| Model | Context | Notes |
+|---|---|---|
+| `nvidia/nemotron-3-nano-4b` | 32 768 | Current default — fast, low RAM, follows instructions well |
+| `google/gemma-4-e2b-it` | 131 072 | Larger context; good alternative on machines with more VRAM |
+
+> Any instruction-tuned model works. The system prompts were hardened against small-model quirks (preamble stripping, thinking-leak prevention) so most 4B–7B chat models should work out of the box.
+
+### 3. Tune LM Studio for lmsgo (Nemotron 3 Nano 4B)
 
 > [!IMPORTANT]
-> These settings have only been tested with **Gemma 4 E2B**. Other models (Qwen, Llama, larger Gemma variants, reasoning-tuned models) may behave differently and need their own tuning — particularly around context size, the "Enable Thinking" toggle, and how strictly they follow the `write` system prompt. If you swap models, expect to revisit these knobs.
+> These settings have been tested with **Nvidia Nemotron 3 Nano 4B** and **Google Gemma 4 E2B**. Other models (Qwen, Llama, larger variants, reasoning-tuned models) may behave differently and need their own tuning — particularly around context size, the "Enable Thinking" toggle, and how strictly they follow the `write` system prompt. If you swap models, expect to revisit these knobs.
 
-The defaults LM Studio ships are tuned for chat, not the bulk-corpus pattern `lmsgo` uses. The values below are sized for **Gemma 4 E2B** — scale proportionally for larger models.
+The defaults LM Studio ships are tuned for chat, not the bulk-corpus pattern `lmsgo` uses. The values below are sized for **Nemotron 3 Nano 4B** — scale proportionally for larger models.
 
 In LM Studio, click the loaded model and open its config panel.
 
@@ -51,7 +57,7 @@ In LM Studio, click the loaded model and open its config panel.
 
 | Setting | Value | Why |
 |---|---|---|
-| Context Length | **16384** | Default 4096 is too small for multi-file corpora; E2B supports up to 131072 |
+| Context Length | **32768** | Default 4096 is too small for multi-file corpora; Nemotron supports up to 32768 |
 | GPU Offload | **max** (slide fully right) | Any layers left on CPU run 5–10× slower |
 
 **Load tab → Advanced**
